@@ -7,6 +7,7 @@ import re
 import shlex
 import tempfile
 import uuid
+from urllib.parse import urlsplit
 
 class CommandBook:
     def __init__(self, path):
@@ -123,3 +124,56 @@ def developer_commands(workspace):
         ('Cargo tests', ['cargo', 'test']),
         ('Cargo formatting check', ['cargo', 'fmt', '--check']),
     ]
+
+
+def nano_command(filename):
+    path = Path(filename).absolute()
+    if not path.is_file():
+        raise ValueError('Choose an existing file to open in nano.')
+    if any(ord(char) < 32 or ord(char) == 127 for char in str(path)):
+        raise ValueError('This file name contains control characters and cannot be loaded into the command draft.')
+    return ['nano', '--', str(path)]
+
+
+def git_actions():
+    """False means show information; True means review in terminal before running."""
+    return [
+        ('Status', ['git', '--no-optional-locks', 'status', '--short', '--branch'], False),
+        ('Current branch', ['git', 'branch', '--show-current'], False),
+        ('List branches', ['git', '--no-pager', 'branch', '-a'], False),
+        ('Recent commits', ['git', '--no-pager', 'log', '--oneline', '-n', '10'], False),
+        ('Unstaged changes', ['git', '--no-pager', 'diff', '--stat'], False),
+        ('Staged changes', ['git', '--no-pager', 'diff', '--cached', '--stat'], False),
+        ('Remote addresses', ['git', 'remote', '-v'], False),
+        ('Repository folder', ['git', 'rev-parse', '--show-toplevel'], False),
+        ('Pull / fast-forward only', ['git', 'pull', '--ff-only', '--no-rebase'], True),
+        ('Fetch remote updates', ['git', 'fetch', '--prune'], True),
+        ('Stage all changes', ['git', 'add', '--all'], True),
+        ('Initialize Git here', ['git', 'init'], True),
+        ('Push current branch', ['git', 'push', 'origin', 'HEAD'], True),
+        ('First push / set upstream', ['git', 'push', '-u', 'origin', 'HEAD'], True),
+    ]
+
+
+def git_text_command(action, text):
+    text = text.strip()
+    if not text or any(ord(char) < 32 or ord(char) == 127 for char in text):
+        raise ValueError('Enter one line of text for this action.')
+    if action in ('new_branch', 'switch_branch'):
+        if (not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9/_.-]*', text)
+                or '..' in text or '//' in text
+                or any(part.startswith('.') or part.endswith(('.', '.lock')) for part in text.split('/'))
+                or text.endswith('/')):
+            raise ValueError('Use a branch name such as feature/my-work, without spaces, control characters or leading dashes.')
+        return ['git', 'switch', '-c', text] if action == 'new_branch' else ['git', 'switch', '--', text]
+    if action == 'commit':
+        return ['git', 'commit', '-m', text]
+    if action == 'clone':
+        parsed = urlsplit(text)
+        https = parsed.scheme == 'https' and parsed.netloc and not parsed.username and not parsed.password
+        ssh = parsed.scheme == 'ssh' and parsed.hostname and not parsed.password
+        scp = re.fullmatch(r'git@[A-Za-z0-9.-]+:[A-Za-z0-9._/-]+', text)
+        if not (https or ssh or scp) or any(char.isspace() for char in text):
+            raise ValueError('Use an HTTPS or SSH repository URL without an embedded password/token.')
+        return ['git', 'clone', '--', text]
+    raise ValueError('Unknown Git text action.')

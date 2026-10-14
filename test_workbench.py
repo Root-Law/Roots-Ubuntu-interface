@@ -77,3 +77,38 @@ def test_developer_pytest_actions_use_project_venv(tmp_path):
     commands = dict(developer_commands(tmp_path))
     assert commands['Run pytest'] == [str(tmp_path / '.venv/bin/python'), '-m', 'pytest', '-q']
     assert commands['Cargo tests'] == ['cargo', 'test']
+
+def test_nano_command_handles_spaces_and_quotes(tmp_path):
+    from workbench import nano_command
+    path = tmp_path / "some file's name.py"
+    path.write_text('print(1)')
+    args = nano_command(path)
+    assert args == ['nano', '--', str(path)]
+    command = staged_command(tmp_path, args)
+    import shlex
+    assert shlex.split(command)[-3:] == args
+    with pytest.raises(ValueError):
+        nano_command(tmp_path / 'missing.py')
+
+def test_git_mutations_are_reviewed_and_push_targets_only_head():
+    from workbench import git_actions
+    actions = {label: (args, review) for label, args, review in git_actions()}
+    assert actions['Pull / fast-forward only'] == (['git', 'pull', '--ff-only', '--no-rebase'], True)
+    assert actions['Status'][1] is False
+    assert actions['Stage all changes'][1] is True
+    assert actions['Push current branch'] == (['git', 'push', 'origin', 'HEAD'], True)
+    assert not any('--force' in args for args, _ in actions.values())
+
+def test_git_message_and_branch_input_stays_literal(tmp_path):
+    from workbench import git_text_command
+    message = 'fix "quotes"; $(do-not-run)'
+    assert git_text_command('commit', message) == ['git', 'commit', '-m', message]
+    assert git_text_command('new_branch', 'feature/nano-files') == ['git', 'switch', '-c', 'feature/nano-files']
+    for name in ('-force', 'bad name', 'bad..branch', '../outside', 'branch\nnext'):
+        with pytest.raises(ValueError):
+            git_text_command('switch_branch', name)
+    assert git_text_command('clone', 'https://github.com/Root-Law/Roots-Ubuntu-interface.git')[-1].endswith('.git')
+    with pytest.raises(ValueError):
+        git_text_command('clone', 'ext::sh -c unsafe')
+    with pytest.raises(ValueError):
+        git_text_command('clone', 'https://token@github.com/root/repo.git')

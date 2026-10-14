@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2 — Git controls and nano file picker
+
+- Add 08 / GITHUB with status/branch/history/change/remote information, reviewed fast-forward pull, fetch, staging, commits, branch creation/switching and push controls.
+- Add a clickable keyboard for Git messages, branch names and clone URLs; keep arguments literal and show the selected repository folder.
+- Add Open a file in nano to Terminal; prepare a quoted file command for review without injecting it into a running task.
+- Ensure Git and nano are included by the Ubuntu installer.
+- Extend touchpad help, regression tests and application-preference isolation during pytest.
+
 ## 0.1.1 — Stable menu and touchpad help
 
 - Keep left-menu buttons at a fixed height when Developer/activity changes the available space; the menu scrolls on smaller windows.

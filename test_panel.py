@@ -3,13 +3,21 @@ os.environ['QT_QPA_PLATFORM'] = 'offscreen'
 import sys
 import time
 import pytest
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMessageBox, QFileDialog
+from PyQt6.QtCore import QSettings, QStandardPaths
+import rootslaw_panel as panel_module
 from rootslaw_panel import Panel, Runner, Terminal, MouseKeyboard
 from PyQt6.QtWidgets import QLineEdit
 
 @pytest.fixture(scope='session')
 def app():
     return QApplication.instance() or QApplication([])
+
+@pytest.fixture(autouse=True)
+def isolate_application_preferences(app, tmp_path, monkeypatch):
+    # Running pytest must not change the user's selected project or command keys.
+    monkeypatch.setattr(panel_module, 'QSettings', lambda *args: QSettings(str(tmp_path / 'settings.ini'), QSettings.Format.IniFormat))
+    monkeypatch.setattr(QStandardPaths, 'writableLocation', lambda location: str(tmp_path / 'config'))
 
 def wait(app, result):
     deadline = time.monotonic() + 5
@@ -254,3 +262,59 @@ def test_help_opens_separately_and_topics_are_clickable(app):
     finally:
         panel.help_dialog.close()
         panel.close()
+
+def test_nano_file_picker_stages_without_injecting(app, tmp_path, monkeypatch):
+    panel = Panel()
+    file = tmp_path / 'file with spaces.py'
+    file.write_text('print("test")')
+    monkeypatch.setattr(QFileDialog, 'getOpenFileName', lambda *args: (str(file), ''))
+    staged, sent = [], []
+    monkeypatch.setattr(panel, 'stage', staged.append)
+    monkeypatch.setattr(panel.terminal, 'send', sent.append)
+    panel.choose_nano_file()
+    assert len(staged) == 1 and 'nano --' in staged[0] and str(file) in staged[0]
+    assert sent == []
+    panel.close()
+
+def test_git_information_runs_in_workspace_and_pull_is_staged(app, tmp_path, monkeypatch):
+    panel = Panel()
+    panel.set_workspace(tmp_path)
+    runs, staged = [], []
+    monkeypatch.setattr(panel, 'run', lambda *args: runs.append((args, panel.workspace)))
+    monkeypatch.setattr(panel, 'stage', staged.append)
+    panel.use_git_action('Current branch', ['git', 'branch', '--show-current'], False)
+    panel.use_git_action('Pull', ['git', 'pull', '--ff-only'], True)
+    assert runs == [(('Current branch', 'git', ['branch', '--show-current']), tmp_path)]
+    assert len(staged) == 1 and str(tmp_path) in staged[0] and '--ff-only' in staged[0]
+    assert panel.git_path.text() == str(tmp_path)
+    assert panel.nav_buttons[7].text() == '08 / GITHUB'
+    panel.close()
+
+def test_nano_selected_file_saves_with_clickable_keyboard(app, tmp_path):
+    import shlex
+    from workbench import nano_command
+    file = tmp_path / 'selected file.txt'
+    file.write_text('EXISTING_CONTENT\n')
+    term = Terminal()
+    term.resize(900, 400)
+    term.show()
+    term.start_shell(tmp_path)
+    keyboard = MouseKeyboard(term, QLineEdit())
+    try:
+        command = nano_command(file)
+        command.insert(1, '--ignorercfiles')
+        term.send(shlex.join(command).encode() + b'\r')
+        until(app, lambda: 'EXISTING_CONTENT' in terminal_text(term) and 'GNU nano' in terminal_text(term))
+        for character in 'added':
+            keyboard.character(character, character.upper())
+        keyboard.ctrl.setChecked(True)
+        keyboard.character('o', 'O')
+        until(app, lambda: 'File Name to Write' in terminal_text(term))
+        keyboard.special(b'\r')
+        until(app, lambda: 'added' in file.read_text())
+        keyboard.ctrl.setChecked(True)
+        keyboard.character('x', 'X')
+        until(app, lambda: os.tcgetpgrp(term.fd) == term.child.pid)
+    finally:
+        term.stop_shell()
+        term.close()

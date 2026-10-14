@@ -10,7 +10,7 @@ if ! command -v apt-get >/dev/null; then
     printf 'This installer currently supports Ubuntu/Debian with APT.\n' >&2
     exit 1
 fi
-packages=(python3 python3-venv libegl1 libgl1 libopengl0 libxcb-cursor0
+packages=(python3 python3-venv nano git libegl1 libgl1 libopengl0 libxcb-cursor0
           libxkbcommon-x11-0 libdbus-1-3 fonts-dejavu-core libxcb-icccm4
           libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0
           libxcb-xkb1 libwayland-client0 libwayland-cursor0 libwayland-egl1)

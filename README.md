@@ -54,10 +54,25 @@ For a completely broken keyboard during initial setup, use Windows **Settings �
 | Command Keys | Create, edit, delete and reuse locally saved full commands |
 | Developer | Python environments, pytest runs/collection/last failures, CMake and Cargo actions |
 | Packages | Guided project Python installs and Ubuntu APT package requests |
+| GitHub | Git status/branches/history, reviewed pull/fetch/stage/commit/push actions, and on-screen text input |
 
 The **Show activity** button reveals or hides real command output in a compact panel. The terminal and keyboards have more room when it is hidden. Pages and the left menu scroll on smaller displays; menu buttons keep their height when switching pages. Buttons respond to a normal single click or touchpad tap; no hover-only actions or timed gestures are required.
 
 Click **Help** at the bottom of the app, or **How to use ROOTS** on Terminal, to open plain-language instructions in a separate window. Choose a topic from its list and scroll to read. Help stays open while you use the main app.
+
+## Open any file in nano
+
+On Terminal, click **Open a file in nano…** and choose an existing file. Its full path is quoted and loaded into the command draft. At an idle Bash prompt, click **Send text**, then **ENTER**. Nano opens inside the embedded terminal. With **Type into Bash** selected on the clickable keyboard, click **CTRL → O**, then Enter to save; **CTRL → X** exits. The installer checks that nano is available.
+
+## Everyday Git and GitHub work
+
+Open **08 / GITHUB** and choose the local repository folder. This uses the same project selection as Developer and Packages. Information buttons display status, current/local/remote branches, recent commits, changed-file summaries, remote addresses and the repository's top folder in Activity.
+
+Pull uses `git pull --ff-only --no-rebase`; it stops on diverged history instead of creating a merge or rebasing. Fetch, stage, initialize, branch, commit, clone and push requests are loaded into the terminal draft for review. Click Send text and ENTER only when the shell is ready. No remote write is triggered by merely entering a message or clicking an information button.
+
+Use **Stage one file…** to pick a file within the selected folder, or **Stage all changes** to select additions, modifications and deletions across the repository. Review Status/Staged changes, enter a message using the on-screen keyboard, then choose **Commit using text**. The branch-name and clone-URL buttons use the same text field. Clone downloads into a new directory inside the chosen parent folder; select that checkout afterwards.
+
+Push buttons target the current branch (`HEAD`) on `origin`; **First push / set upstream** also sets its upstream. Git uses the machine's existing authentication and identity settings. These controls do not create repositories on the GitHub website or automatically sign into an account. No force-push, hard-reset or file-discard controls are included.
 
 ## Saved command keys
 

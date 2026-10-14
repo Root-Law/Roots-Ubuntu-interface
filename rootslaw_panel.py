@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
     QStackedWidget, QVBoxLayout, QWidget, QLineEdit, QComboBox, QScrollArea, QLayout, QDialog, QTextBrowser,
 )
 import pyte
-from workbench import CommandBook, package_command, project_python, developer_commands, staged_command
+from workbench import CommandBook, package_command, project_python, developer_commands, staged_command, nano_command, git_actions, git_text_command
 
 WINDOWS_HOME = Path('/mnt/c/Users')
 GIMP_ID = r'shell:AppsFolder\GIMP.43237F745459_nq49gba4h4mx8!GIMP'
@@ -567,6 +567,8 @@ If sudo asks for your Ubuntu password, choose Type into Bash and click its chara
 
 Using nano
 
+Click Open a file in nano and select the file you want to edit. ROOTS places the command in the draft with the selected file's full path. When Bash is ready, click Send text and ENTER to open it. You do not need to type the filename.
+
 With Type into Bash selected, click CTRL and then O to ask nano to save. Click Enter to accept the filename. Click CTRL and then X to leave nano. CTRL releases after you click a letter.
 
 The terminal keeps its own current folder. Choosing a different project elsewhere in ROOTS does not move an already open terminal. Use cd when you want to change its folder.''',
@@ -639,6 +641,41 @@ If Ubuntu cannot find a package, try Review APT index refresh in Terminal first.
 If a download fails because of the internet connection, do not assume the package is wrong. Read the error and retry when the connection is working.
 
 Choose packages that your project actually needs. Python packages are kept separate from the ROOTS application's own packages.''',
+    'Git and GitHub': '''Use Git with the touchpad
+
+First click Choose repository folder and select your local project checkout. This also changes the project used by Developer, Packages and saved command buttons. A folder inside a checkout works for Git information commands too.
+
+Find out what is happening
+
+Status shows your branch and changed files. Current branch prints the branch name; it may be blank if Git is not on a named branch. List branches shows local and remote branches. Recent commits lists the latest recorded changes.
+
+Unstaged changes shows the size of changes you have not selected for a commit. Staged changes shows the changes selected for your next commit. Remote addresses shows where Git fetches from and pushes to. Repository folder prints the checkout's top folder.
+
+These buttons show their results in Activity. If the selected folder is not a Git checkout, Git reports an error. Choose the right folder and try again.
+
+Bring in updates
+
+Pull / fast-forward only prepares a pull from your branch's upstream. It will stop rather than merge two histories that have diverged. Fetch remote updates downloads remote information without merging it into your current work.
+
+After you click one of these buttons, review the draft in Terminal. Click Send text and ENTER only when Bash is waiting for a command.
+
+Save and share your changes
+
+Stage one file lets you pick a file within the selected repository folder. Stage all changes selects all additions, modifications and deletions in the repository for the next commit. Check Status and Staged changes so you know what you are including.
+
+Use the keyboard below to enter a short description in the Git text field, then click Commit using text. Review and run the prepared command. A commit records the staged changes on your laptop.
+
+Push current branch sends that branch to the remote named origin. First push / set upstream also links the current branch to origin. A push sends your commits to the remote; it does not commit unstaged files. Git uses your existing authentication setup and may ask you to sign in.
+
+Branches and cloning
+
+Enter a branch name in Git text, then choose New branch using text or Switch branch using text. Git can refuse a switch if it would conflict with unsaved changes. ROOTS does not discard those changes automatically.
+
+To download a repository, choose its destination parent folder, paste or type the HTTPS or SSH URL into Git text and click Clone URL using text. After running the command, choose the new checkout folder before using Git commands on it.
+
+Initialize Git here prepares a new local Git repository in the selected folder. It does not create a repository on the GitHub website.
+
+Commands that change Git state are always prepared for review in Terminal. No command runs just because you entered a message or branch name.''',
     'Workspace and other tools': '''Open your tools and folders
 
 Workspace contains buttons for VS Code, GIMP, Notepad++, the shared folder, Windows home and Explorer.
@@ -726,7 +763,7 @@ class Panel(QMainWindow):
         nav.setSpacing(10)
         self.pages = QStackedWidget()
         self.nav_buttons = []
-        for index, name in enumerate(('01 / WORKSPACE', '02 / SYSTEM', '03 / MAINTENANCE', '04 / TERMINAL', '05 / COMMAND KEYS', '06 / DEVELOPER', '07 / PACKAGES')):
+        for index, name in enumerate(('01 / WORKSPACE', '02 / SYSTEM', '03 / MAINTENANCE', '04 / TERMINAL', '05 / COMMAND KEYS', '06 / DEVELOPER', '07 / PACKAGES', '08 / GITHUB')):
             button = QPushButton(name)
             button.setCheckable(True)
             button.setFixedWidth(185)
@@ -754,6 +791,7 @@ class Panel(QMainWindow):
         self.make_commands()
         self.make_developer()
         self.make_packages()
+        self.make_github()
         self.navigate(0)
         console_header = QHBoxLayout()
         caption = QLabel('LIVE ACTIVITY / REAL COMMAND OUTPUT')
@@ -901,6 +939,7 @@ class Panel(QMainWindow):
         box = self.frame('TERMINAL / INTERACTIVE UBUNTU BASH',
                          'Use the buttons below to type and run commands. Open “How to use ROOTS” for step-by-step help with the touchpad.')
         box.addWidget(self.small_button('How to use ROOTS', lambda: self.show_help('Terminal')))
+        box.addWidget(self.small_button('Open a file in nano…', self.choose_nano_file))
         toolbar = QHBoxLayout()
         self.terminal = Terminal()
         self.terminal_status = QLabel('BASH OFFLINE / select Terminal or Start Bash')
@@ -948,6 +987,18 @@ class Panel(QMainWindow):
         # Never store drafts; they may contain sensitive text.
         self.terminal.send(self.composer.text().encode('utf-8'))
         self.terminal.setFocus()
+
+    def choose_nano_file(self):
+        filename, _ = QFileDialog.getOpenFileName(self, 'Choose a file to open in nano', str(self.workspace), 'All files (*)')
+        if not filename:
+            return
+        try:
+            args = nano_command(filename)
+        except ValueError as exc:
+            self.show_error(exc)
+            return
+        self.stage(staged_command(self.workspace, args))
+        self.terminal_status.setText('NANO READY / click Send text, then ENTER at a Bash prompt. Use CTRL then O to save; CTRL then X to exit.')
 
     def show_help(self, topic='Getting started'):
         if self.help_dialog is None:
@@ -1091,6 +1142,8 @@ class Panel(QMainWindow):
         if hasattr(self, 'package_path'):
             self.package_path.setText(str(self.workspace))
             self.preview_package()
+        if hasattr(self, 'git_path'):
+            self.git_path.setText(str(self.workspace))
 
     def stage_developer(self):
         _, args = developer_commands(self.workspace)[self.dev_choice.currentIndex()]
@@ -1205,6 +1258,76 @@ class Panel(QMainWindow):
             else:
                 self.stage(staged_command(self.workspace, args))
 
+    def make_github(self):
+        box = self.frame('GITHUB / EVERYDAY GIT',
+                         'Choose the repository folder first. Information buttons show results in Activity. Commands that change files, branches or remote history open a draft in Terminal for you to review and run.')
+        self.git_path = QLabel(str(self.workspace))
+        self.git_path.setWordWrap(True)
+        self.git_path.setObjectName('path')
+        box.addWidget(self.git_path)
+        row = QHBoxLayout()
+        row.addWidget(self.small_button('Choose repository folder…', self.choose_workspace))
+        row.addWidget(self.small_button('How to use Git', lambda: self.show_help('Git and GitHub')))
+        box.addLayout(row)
+        grid = QGridLayout()
+        for i, (name, args, review) in enumerate(git_actions()):
+            button = self.small_button(name, lambda checked=False, title=name, values=args, staged=review: self.use_git_action(title, values, staged))
+            button.setToolTip(shlex.join(args) + (' — review in Terminal' if review else ' — output in Activity'))
+            button.setMinimumHeight(46)
+            grid.addWidget(button, i // 2, i % 2)
+            if not review:
+                self.action_buttons.append(button)
+        box.addLayout(grid)
+        self.git_text = QLineEdit()
+        self.git_text.setPlaceholderText('Commit message, branch name or clone URL — use the keyboard below')
+        box.addWidget(self.git_text)
+        row = QHBoxLayout()
+        row.addWidget(self.small_button('Paste text', lambda: self.git_text.setText(QApplication.clipboard().text())))
+        row.addWidget(self.small_button('Clear text', self.git_text.clear))
+        box.addLayout(row)
+        grid = QGridLayout()
+        builders = [('New branch using text', 'new_branch'), ('Switch branch using text', 'switch_branch'),
+                    ('Commit using text', 'commit'), ('Clone URL using text', 'clone')]
+        for i, (name, action) in enumerate(builders):
+            grid.addWidget(self.small_button(name, lambda checked=False, value=action: self.prepare_git_text(value)), i // 2, i % 2)
+        box.addLayout(grid)
+        box.addWidget(self.small_button('Stage one file…', self.choose_git_file))
+        info = QLabel('Stage selected changes before committing. A commit records them locally; a push sends commits to the configured remote. No force-push or reset button is included. Clone creates a new checkout inside the selected folder.')
+        info.setWordWrap(True)
+        box.addWidget(info)
+        keyboard = MouseKeyboard(self.terminal, self.git_text)
+        keyboard.target.setItemText(1, 'Edit Git text')
+        keyboard.target.setCurrentIndex(1)
+        box.addWidget(keyboard)
+
+    def use_git_action(self, title, args, review):
+        if review:
+            self.stage(staged_command(self.workspace, args))
+        else:
+            self.run(title, args[0], args[1:])
+
+    def prepare_git_text(self, action):
+        try:
+            args = git_text_command(action, self.git_text.text())
+        except ValueError as exc:
+            self.show_error(exc)
+            return
+        self.stage(staged_command(self.workspace, args))
+
+    def choose_git_file(self):
+        filename, _ = QFileDialog.getOpenFileName(self, 'Choose a file to stage', str(self.workspace), 'All files (*)')
+        if not filename:
+            return
+        try:
+            relative = Path(filename).absolute().relative_to(self.workspace.absolute())
+        except ValueError:
+            self.show_error('Choose a file inside the selected repository folder.')
+            return
+        if any(ord(char) < 32 or ord(char) == 127 for char in str(relative)):
+            self.show_error('This file name contains control characters and cannot be loaded into the draft.')
+            return
+        self.stage(staged_command(self.workspace, ['git', 'add', '--', str(relative)]))
+
     def start_terminal(self):
         try:
             self.terminal.start_shell(self.workspace)
@@ -1218,7 +1341,7 @@ class Panel(QMainWindow):
         if index == 3:
             self.start_terminal()
         if hasattr(self, 'console'):
-            self.show_activity(index not in (3, 4, 6))
+            self.show_activity(index not in (3, 4, 6, 7))
 
     def show_activity(self, visible):
         self.console.setVisible(visible)
