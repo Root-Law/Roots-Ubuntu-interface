@@ -1,0 +1,25 @@
+name: Tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  pytest:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python: ['3.12', '3.14']
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Linux GUI and terminal dependencies
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0 nano
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Check installer syntax
+        run: bash -n install.sh launch.sh
+      - name: Run tests
+        run: python -m pytest -q
