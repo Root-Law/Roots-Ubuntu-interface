@@ -55,7 +55,9 @@ For a completely broken keyboard during initial setup, use Windows **Settings â†
 | Developer | Python environments, pytest runs/collection/last failures, CMake and Cargo actions |
 | Packages | Guided project Python installs and Ubuntu APT package requests |
 
-The **Show activity** button reveals or hides real command output. The terminal and keyboards have more room when the activity panel is hidden. Pages scroll on smaller displays. Buttons respond to a normal single click or touchpad tap; no hover-only actions or timed gestures are required.
+The **Show activity** button reveals or hides real command output in a compact panel. The terminal and keyboards have more room when it is hidden. Pages and the left menu scroll on smaller displays; menu buttons keep their height when switching pages. Buttons respond to a normal single click or touchpad tap; no hover-only actions or timed gestures are required.
+
+Click **Help** at the bottom of the app, or **How to use ROOTS** on Terminal, to open plain-language instructions in a separate window. Choose a topic from its list and scroll to read. Help stays open while you use the main app.
 
 ## Saved command keys
 

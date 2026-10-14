@@ -21,7 +21,7 @@ from PyQt6.QtGui import QColor, QFont, QPainter, QPen, QFontMetrics
 from PyQt6.QtWidgets import (
     QApplication, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QLabel,
     QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QGraphicsDropShadowEffect,
-    QStackedWidget, QVBoxLayout, QWidget, QLineEdit, QComboBox, QScrollArea, QLayout, QDialog,
+    QStackedWidget, QVBoxLayout, QWidget, QLineEdit, QComboBox, QScrollArea, QLayout, QDialog, QTextBrowser,
 )
 import pyte
 from workbench import CommandBook, package_command, project_python, developer_commands, staged_command
@@ -513,6 +513,184 @@ QMessageBox QLabel { min-width: 360px; }
 '''
 
 
+HELP_TOPICS = {
+    'Getting started': '''Welcome to ROOTS
+
+You can use ROOTS by clicking with the touchpad. You do not need a physical keyboard for the controls inside this app.
+
+The buttons on the left open different parts of the program. Workspace opens your apps and folders. Terminal lets you type Ubuntu commands. Command Keys stores commands you use often. Developer helps with Python and tests. Packages helps install tools.
+
+Start with a project folder
+
+Open Developer. Click Choose project and select the folder you want to work in. If you need a new folder, click New project folder. Use the keyboard shown in that window to enter a name, then click Create folder.
+
+If part of a page is out of view, scroll using your touchpad or drag the scrollbar on the right. The left menu also has its own scrollbar when the window is small.
+
+Reading results
+
+Show activity opens the output box. Developer tasks and Python installs write their results there. A failed task shows FAILED and its exit code. The terminal has its own output area.
+
+You can hide activity to make more room, or save its displayed text with Save activity. Saving activity does not save the terminal session.
+
+Closing ROOTS
+
+If a terminal session is still open, ROOTS asks before closing it. Closing can stop commands running in that session. If you want to keep working, choose No.''',
+    'Terminal': '''Using the Ubuntu terminal with your touchpad
+
+1. Open Terminal using the left menu. A Bash prompt should appear. This is where Ubuntu waits for your next command. If the session has ended, click Start Bash.
+
+2. Click On-screen keyboard. In its selection box, choose Type into Bash. Click the letters and symbols you need, then click Enter to run the command.
+
+For a first try, click p, w and d, then Enter. Ubuntu will print the folder the terminal is currently using.
+
+Useful buttons
+
+Backspace removes the character before the cursor. Left and right arrows move through the text. Up recalls an earlier command. Tab asks Ubuntu to complete a command or filename. SHIFT changes the keys to capitals and extra symbols. Click SHIFT again to turn it off.
+
+Interrupt / Ctrl+C asks the current command to stop. Use it if a command is taking too long. It does not close the terminal.
+
+The extra-key list contains Home, End, Delete, Page Up, Page Down and the F keys. Choose one and click Send selected key. What a key does depends on the program running in the terminal.
+
+Prepare a command before running it
+
+Choose Edit command draft in the keyboard's selection box. Type into the draft field. A preset can also be loaded into that field. Read the command, click Send text, then click ENTER when the terminal is waiting at a prompt.
+
+Send text does not run the command by itself. Do not send a new command while the terminal is asking a question or running another task.
+
+Copy and paste
+
+Drag across text in the terminal and click Copy selection. Click Paste to insert text from the clipboard. A paste with several lines can run commands immediately, so ROOTS asks you to confirm it.
+
+Passwords
+
+If sudo asks for your Ubuntu password, choose Type into Bash and click its characters directly, then Enter. Usually nothing appears while you type a password. That is normal. Do not put a password into the visible command draft or save it as a command key.
+
+Using nano
+
+With Type into Bash selected, click CTRL and then O to ask nano to save. Click Enter to accept the filename. Click CTRL and then X to leave nano. CTRL releases after you click a letter.
+
+The terminal keeps its own current folder. Choosing a different project elsewhere in ROOTS does not move an already open terminal. Use cd when you want to change its folder.''',
+    'Saved command buttons': '''Make a button for a command you use often
+
+1. Open Command Keys.
+2. Choose Edit button name on its keyboard. Enter a short name, such as My tests.
+3. Choose Edit saved command. Enter the full command, or click Paste into command to use the clipboard.
+4. Click Save command key. Your new button appears on this page.
+
+Example
+
+Button name: My tests
+Command: .venv/bin/python -m pytest -q
+
+This example needs a Python environment and pytest in the selected project. The Developer and Packages pages can set those up.
+
+Use a saved button
+
+Click the button. ROOTS opens Terminal with the command in the draft field. Check the selected project and command. Click Send text and then ENTER when Bash is ready.
+
+Change or remove a button
+
+Choose it from the saved-key list and click Edit selected. Change its name or command, then Save command key. New key clears the editor so you can add another button. Delete selected removes only that saved button.
+
+Your buttons are saved on this laptop and remain after closing ROOTS. They are stored as readable text. Do not save passwords or private keys. A saved command can change files when you choose to run it, just like a command typed into a normal terminal.''',
+    'Python and tests': '''Set up Python work in a project
+
+1. Open Developer and choose your project folder.
+2. Choose Create project .venv from the list.
+3. Click Run in project / live output.
+
+This creates a separate place for that project's Python packages. An existing .venv is not overwritten by this button.
+
+Install pytest
+
+Open Packages. Choose Python / project .venv, choose Python tests, and click Use selected package set. Click Install selected packages, read the request and confirm it. Wait for the result in activity.
+
+Run the tests
+
+Return to Developer. Choose Run pytest and click Run in project / live output. ROOTS shows what pytest actually reports. If the project has no tests yet, pytest may report that no tests were collected.
+
+List collected tests shows which tests pytest finds without running them. Stop at first test failure ends a test run at its first failure. Repeat last failed tests asks pytest to run the tests that failed previously.
+
+Other developer tools
+
+The list also contains Python package information, C++ compiler and CMake actions, and Rust/Cargo actions. Those tools must be installed, and build commands need a suitable project. Use Packages to prepare the tools you need.
+
+Review in terminal loads the selected action into the terminal draft. It does not run it until you send the text and press ENTER.''',
+    'Installing packages': '''Install tools without typing on a physical keyboard
+
+First choose the project you want to work on. The project path is shown near the top of Packages.
+
+Python packages
+
+Choose Python / project .venv. Choose a suggested set, then click Use selected package set. Or use the keyboard below to enter package names separated by spaces, such as pytest numpy.
+
+Click Install selected packages. ROOTS shows the exact request. Confirm it to install into this project's Python environment. Watch activity for the result. Create the project's .venv on Developer first if it is missing.
+
+Ubuntu tools
+
+Choose Ubuntu / APT. Suggested sets include Python essentials, C++ build tools, Rust tools and terminal utilities. Click Use selected package set, then Install selected packages.
+
+After you confirm, ROOTS opens Terminal with the request in the draft. When Bash is waiting for a command, click Send text and ENTER.
+
+If sudo asks for a password, use the terminal keyboard with Type into Bash selected. Password characters usually do not appear. If APT asks whether to continue, click y and Enter. Click n and Enter to decline.
+
+If Ubuntu cannot find a package, try Review APT index refresh in Terminal first. Run that request, wait for it to finish, then try the install again.
+
+If a download fails because of the internet connection, do not assume the package is wrong. Read the error and retry when the connection is working.
+
+Choose packages that your project actually needs. Python packages are kept separate from the ROOTS application's own packages.''',
+    'Workspace and other tools': '''Open your tools and folders
+
+Workspace contains buttons for VS Code, GIMP, Notepad++, the shared folder, Windows home and Explorer.
+
+Choose project folder sets the project used by Developer, Packages and saved command buttons. Set Windows home lets you select your Windows user folder under /mnt/c/Users. Set shared folder lets you choose the folder you want its button to open.
+
+The Windows app buttons need those programs installed and Windows integration working. A launch message means the request was sent; check that the other app opened.
+
+System information
+
+System reads Ubuntu's version, memory and disk information, and checks which development commands are available. Memory shown inside WSL is the memory visible to Ubuntu, not a full Windows hardware report.
+
+Maintenance
+
+Check system reads information without cleaning anything. Prepare APT cache cleanup loads a command for removing downloaded package files. Installed programs remain installed. You still choose whether to run the command in Terminal.
+
+ROOTS does not automatically delete your files or flush the Linux memory cache.''',
+}
+
+
+class HelpWindow(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('ROOTS / How to use the program')
+        self.resize(760, 620)
+        self.setMinimumSize(520, 400)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        heading = QLabel('HOW TO USE ROOTS')
+        heading.setObjectName('eyebrow')
+        layout.addWidget(heading)
+        self.topics = QComboBox()
+        self.topics.addItems(HELP_TOPICS)
+        self.topics.setMinimumHeight(38)
+        layout.addWidget(self.topics)
+        self.reader = QTextBrowser()
+        self.reader.setStyleSheet('QTextBrowser { background: #160d10; color: #f2ded5; border: 1px solid #854538; padding: 14px; font-family: "DejaVu Sans"; font-size: 15px; }')
+        layout.addWidget(self.reader, 1)
+        close = QPushButton('Close help')
+        close.clicked.connect(self.close)
+        layout.addWidget(close)
+        self.topics.currentTextChanged.connect(self.select_topic)
+        self.select_topic('Getting started')
+
+    def select_topic(self, topic):
+        if topic not in HELP_TOPICS:
+            topic = 'Getting started'
+        self.topics.setCurrentText(topic)
+        self.reader.setPlainText(HELP_TOPICS[topic])
+        self.reader.verticalScrollBar().setValue(0)
+
+
 class Panel(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -532,6 +710,7 @@ class Panel(QMainWindow):
         self.runner.output.connect(self.capture_folder_path)
         self.runner.completed.connect(self.completed)
         self.terminal = None
+        self.help_dialog = None
         self.action_buttons = []
         root = QWidget()
         self.setCentralWidget(root)
@@ -540,7 +719,10 @@ class Panel(QMainWindow):
         layout.setSpacing(14)
         layout.addWidget(CircuitHeader())
         body = QHBoxLayout()
-        nav = QVBoxLayout()
+        sidebar = QWidget()
+        nav = QVBoxLayout(sidebar)
+        nav.setContentsMargins(0, 0, 0, 0)
+        nav.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         nav.setSpacing(10)
         self.pages = QStackedWidget()
         self.nav_buttons = []
@@ -548,12 +730,22 @@ class Panel(QMainWindow):
             button = QPushButton(name)
             button.setCheckable(True)
             button.setFixedWidth(185)
+            button.setFixedHeight(46)
             button.clicked.connect(lambda checked, i=index: self.navigate(i))
             self.nav_buttons.append(button)
             nav.addWidget(button)
         nav.addStretch()
-        body.addLayout(nav)
-        body.addWidget(self.pages, 1)
+        self.sidebar_scroll = QScrollArea()
+        self.sidebar_scroll.setFixedWidth(205)
+        self.sidebar_scroll.setWidgetResizable(True)
+        self.sidebar_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.sidebar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.sidebar_scroll.setWidget(sidebar)
+        body.addWidget(self.sidebar_scroll)
+        right_column = QVBoxLayout()
+        right_column.setSpacing(14)
+        right_column.addWidget(self.pages, 1)
+        body.addLayout(right_column, 1)
         layout.addLayout(body, 1)
         self.make_workspace()
         self.make_system()
@@ -572,19 +764,20 @@ class Panel(QMainWindow):
         self.cursor = QLabel('IDLE ▌')
         self.cursor.setObjectName('eyebrow')
         console_header.addWidget(self.cursor)
-        layout.addLayout(console_header)
+        right_column.addLayout(console_header)
         self.console = QPlainTextEdit()
         self.console.setReadOnly(True)
-        self.console.setMinimumHeight(210)
+        self.console.setMinimumHeight(120)
+        self.console.setMaximumHeight(160)
         self.console.document().setMaximumBlockCount(2000)
         self.glow(self.console, '#ac3e23')
-        layout.addWidget(self.console, 1)
+        right_column.addWidget(self.console)
         self.progress = QProgressBar()
         self.progress.setTextVisible(False)
         self.progress.setFixedHeight(4)
         self.progress.setRange(0, 1)
         self.progress.setValue(0)
-        layout.addWidget(self.progress)
+        right_column.addWidget(self.progress)
         bottom = QHBoxLayout()
         self.status = QLabel('READY / manual control')
         self.status.setObjectName('eyebrow')
@@ -594,6 +787,7 @@ class Panel(QMainWindow):
         self.activity_toggle.setChecked(True)
         self.activity_toggle.toggled.connect(self.show_activity)
         bottom.addWidget(self.activity_toggle)
+        bottom.addWidget(self.small_button('Help', lambda: self.show_help()))
         for name, callback in (('Save activity', self.save_log), ('Clear', self.console.clear)):
             button = QPushButton(name)
             button.clicked.connect(callback)
@@ -705,7 +899,8 @@ class Panel(QMainWindow):
 
     def make_terminal(self):
         box = self.frame('TERMINAL / INTERACTIVE UBUNTU BASH',
-                         'Ctrl+C interrupts · Ctrl+Shift+C copies selection · Ctrl+Shift+V pastes · Shift+PageUp/Down scrolls. Shell directory is independent of the launcher workspace.')
+                         'Use the buttons below to type and run commands. Open “How to use ROOTS” for step-by-step help with the touchpad.')
+        box.addWidget(self.small_button('How to use ROOTS', lambda: self.show_help('Terminal')))
         toolbar = QHBoxLayout()
         self.terminal = Terminal()
         self.terminal_status = QLabel('BASH OFFLINE / select Terminal or Start Bash')
@@ -753,6 +948,14 @@ class Panel(QMainWindow):
         # Never store drafts; they may contain sensitive text.
         self.terminal.send(self.composer.text().encode('utf-8'))
         self.terminal.setFocus()
+
+    def show_help(self, topic='Getting started'):
+        if self.help_dialog is None:
+            self.help_dialog = HelpWindow(self)
+        self.help_dialog.select_topic(topic)
+        self.help_dialog.show()
+        self.help_dialog.raise_()
+        self.help_dialog.activateWindow()
 
     def small_button(self, text, callback):
         button = QPushButton(text)

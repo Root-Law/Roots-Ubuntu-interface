@@ -219,3 +219,38 @@ def test_apt_install_is_staged_and_never_injected(app, tmp_path, monkeypatch):
     assert len(staged) == 1 and 'sudo -- apt-get install -- git nano' in staged[0]
     assert sent == []
     panel.close()
+
+def test_sidebar_does_not_scrunch_when_switching_pages(app):
+    panel = Panel()
+    panel.resize(760, 650)
+    panel.show()
+    try:
+        for index in (5, 0, 1, 2, 3, 5):
+            panel.navigate(index)
+            app.processEvents()
+            assert all(button.height() == 46 for button in panel.nav_buttons)
+            positions = [button.y() for button in panel.nav_buttons]
+            assert all(after - before == 56 for before, after in zip(positions, positions[1:]))
+        assert panel.nav_buttons[-1].geometry().bottom() <= panel.sidebar_scroll.viewport().height()
+        assert 120 <= panel.console.height() <= 160
+    finally:
+        panel.terminal.stop_shell()
+        panel.close()
+
+def test_help_opens_separately_and_topics_are_clickable(app):
+    panel = Panel()
+    panel.show_help('Terminal')
+    try:
+        dialog = panel.help_dialog
+        assert dialog.isVisible()
+        assert 'Click On-screen keyboard' in dialog.reader.toPlainText()
+        dialog.topics.setCurrentText('Installing packages')
+        assert 'click y and Enter' in dialog.reader.toPlainText()
+        assert panel.pages.currentIndex() == 0
+        dialog.close()
+        panel.show_help('Saved command buttons')
+        assert panel.help_dialog is dialog
+        assert 'Save command key' in dialog.reader.toPlainText()
+    finally:
+        panel.help_dialog.close()
+        panel.close()

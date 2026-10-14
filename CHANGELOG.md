@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1 — Stable menu and touchpad help
+
+- Keep left-menu buttons at a fixed height when Developer/activity changes the available space; the menu scrolls on smaller windows.
+- Reduce the activity panel to 120–160 pixels in height.
+- Replace the terminal's keyboard-shortcut banner with a clickable help window.
+- Add plain-language help for terminal input, saved command keys, Python tests, package installation and other tools.
+- Add regression tests for page switching at a small window size and help navigation.
+
 ## 0.1.0 — Ember touchpad workbench
 
 - Dark red/amber desktop interface with scrolling pages and clickable controls.
